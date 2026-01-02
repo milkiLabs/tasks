@@ -63,14 +63,15 @@ export const TodosModule = createModule<Todo>({
      * Get count of completed todos
      */
     async getCompletedCount(): Promise<number> {
-      const all = await privateClient.getAll('');
+      // maxAge=false keeps reads local-only when offline
+      const all = await privateClient.getAll('', false);
       return Object.values(all || {}).filter((t: any) => t?.completed).length;
     },
     /**
      * Get todos by category ID
      */
     async getByCategory(categoryId: string): Promise<Todo[]> {
-      const all = await privateClient.getAll('');
+      const all = await privateClient.getAll('', false);
       return Object.values(all || {}).filter((t: any) => 
         t?.categories?.some((c: CategoryAssignment) => c.categoryId === categoryId)
       ) as Todo[];
@@ -79,7 +80,7 @@ export const TodosModule = createModule<Todo>({
      * Get todos by topic ID
      */
     async getByTopic(topicId: string): Promise<Todo[]> {
-      const all = await privateClient.getAll('');
+      const all = await privateClient.getAll('', false);
       return Object.values(all || {}).filter((t: any) => 
         t?.categories?.some((c: CategoryAssignment) => c.topicIds?.includes(topicId))
       ) as Todo[];

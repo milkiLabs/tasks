@@ -65,7 +65,7 @@ export const TopicsModule = createModule<Topic>({
      * Get topics by category ID
      */
     async getByCategory(categoryId: string): Promise<Topic[]> {
-      const all = await privateClient.getAll('');
+      const all = await privateClient.getAll('', false);
       return Object.values(all || {})
         .filter((t: any) => t?.categoryId === categoryId) as Topic[];
     }

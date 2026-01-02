@@ -99,7 +99,8 @@ export function createModule<T extends BaseItem>(
 
       const standardExports: ModuleExports<T> = {
         async getAll(): Promise<Record<string, T>> {
-          const listing = await privateClient.getAll('');
+          // Use maxAge=false so we always read from the local cache even when offline
+          const listing = await privateClient.getAll('', false);
           const items: Record<string, T> = {};
           
           for (const [key, value] of Object.entries(listing || {})) {
@@ -117,7 +118,8 @@ export function createModule<T extends BaseItem>(
         },
 
         async get(id: string): Promise<T | undefined> {
-          return privateClient.getObject(id) as Promise<T | undefined>;
+          // Same offline-first behavior for single object reads
+          return privateClient.getObject(id, false) as Promise<T | undefined>;
         },
 
         async store(item: T): Promise<void> {
