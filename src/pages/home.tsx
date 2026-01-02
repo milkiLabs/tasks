@@ -1,5 +1,6 @@
 import { createSignal, For, Show } from 'solid-js';
-import { useRemoteStorage } from '../lib/RemoteStorageContext';
+import { useRemoteStorage, useCollection } from '../lib/solid-remotestorage';
+import type { Todo } from '../lib/modules/todos';
 
 /**
  * Todo Item Component
@@ -106,14 +107,39 @@ function ConnectionStatus() {
 /**
  * Home Page - Todo App
  * 
- * Main todo list component that uses RemoteStorage for persistence
+ * Main todo list component that uses RemoteStorage for persistence.
+ * 
+ * This demonstrates the useCollection hook from solid-remotestorage:
+ * - Reactive items array
+ * - Optimistic CRUD operations
+ * - Automatic sync with RemoteStorage
  */
 export default function Home() {
-  const { todos, addTodo, toggleTodo, removeTodo, isLoading } = useRemoteStorage();
+  // Use the collection hook to get reactive todos
+  const todos = useCollection<Todo>({
+    getModule: (rs) => rs.todos,
+    sortFn: (a, b) => b.createdAt - a.createdAt  // Newest first
+  });
 
   // Calculate stats
-  const completedCount = () => todos.filter(t => t.completed).length;
-  const totalCount = () => todos.length;
+  const completedCount = () => todos.items.filter(t => t.completed).length;
+  const totalCount = () => todos.items.length;
+
+  // Handlers using collection methods
+  const handleAdd = (title: string) => {
+    todos.add({ title, completed: false });
+  };
+
+  const handleToggle = (id: string) => {
+    const todo = todos.find(id);
+    if (todo) {
+      todos.update(id, { completed: !todo.completed });
+    }
+  };
+
+  const handleRemove = (id: string) => {
+    todos.remove(id);
+  };
 
   return (
     <section class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
@@ -134,7 +160,7 @@ export default function Home() {
 
         {/* Todo Input */}
         <div class="mb-6">
-          <TodoInput onAdd={addTodo} />
+          <TodoInput onAdd={handleAdd} />
         </div>
 
         {/* Stats */}
@@ -147,7 +173,7 @@ export default function Home() {
 
         {/* Todo List */}
         <Show 
-          when={!isLoading()} 
+          when={!todos.isLoading()} 
           fallback={
             <div class="text-center py-8 text-gray-500">
               Loading todos...
@@ -155,7 +181,7 @@ export default function Home() {
           }
         >
           <Show 
-            when={todos.length > 0}
+            when={todos.items.length > 0}
             fallback={
               <div class="text-center py-12 text-gray-500">
                 <p class="text-4xl mb-4">🎉</p>
@@ -164,14 +190,14 @@ export default function Home() {
             }
           >
             <ul class="space-y-2">
-              <For each={todos}>
+              <For each={todos.items}>
                 {(todo) => (
                   <TodoItem
                     id={todo.id}
                     title={todo.title}
                     completed={todo.completed}
-                    onToggle={toggleTodo}
-                    onRemove={removeTodo}
+                    onToggle={handleToggle}
+                    onRemove={handleRemove}
                   />
                 )}
               </For>

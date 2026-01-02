@@ -1,12 +1,13 @@
 import { Suspense, type Component } from 'solid-js';
 import { A, useLocation } from '@solidjs/router';
-import { RemoteStorageProvider } from './lib/RemoteStorageContext';
+import { RemoteStorageProvider } from './lib/solid-remotestorage';
+import { remoteStorage } from './lib/remoteStorageInstance';
 
 const App: Component<{ children: Element }> = (props) => {
   const location = useLocation();
 
   return (
-    <RemoteStorageProvider widgetContainerId="rs-widget">
+    <RemoteStorageProvider remoteStorage={remoteStorage} widgetContainerId="rs-widget">
       <nav class="bg-gray-200 text-gray-900 px-4">
         <ul class="flex items-center">
           <li class="py-2 px-4">
