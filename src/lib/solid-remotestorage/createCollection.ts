@@ -61,6 +61,8 @@ export interface CollectionAPI<T extends BaseItem> {
   
   /** Reload all items from storage */
   reload: () => Promise<void>;
+  /** Clear all items from the local store (does not delete from remote) */
+  clear: () => void;
 }
 
 /**
@@ -232,6 +234,16 @@ export function createCollection<T extends BaseItem>(
     return items.find(item => item.id === id);
   };
 
+  /**
+   * Clear all items from the local store (does not delete from remote storage)
+   * Used when disconnecting from remote storage to clear the UI immediately
+   */
+  const clear = () => {
+    setItems(reconcile([]));
+    setError(null);
+    initialLoadComplete = false;
+  };
+
   // Set up change listener and initial load
   onMount(() => {
     // Initial load if autoLoad is enabled
@@ -267,7 +279,8 @@ export function createCollection<T extends BaseItem>(
     update,
     remove,
     find,
-    reload
+    reload,
+    clear
   };
 }
 

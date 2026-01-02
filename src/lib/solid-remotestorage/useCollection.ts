@@ -6,6 +6,7 @@
  */
 
 import type RemoteStorage from 'remotestoragejs';
+import { onMount, onCleanup } from 'solid-js';
 import { createCollection, type CollectionAPI, type CollectionOptions } from './createCollection';
 import { useRemoteStorage } from './RemoteStorageProvider';
 import type { BaseItem } from './types';
@@ -79,12 +80,34 @@ export function useCollection<T extends BaseItem>(
   const { rs } = useRemoteStorage();
   const module = options.getModule(rs);
   
-  return createCollection({
+  const collection = createCollection({
     module,
     sortFn: options.sortFn,
     filterFn: options.filterFn,
     autoLoad: options.autoLoad
   });
+
+  // Listen for disconnect events to clear the collection immediately
+  onMount(() => {
+    const handleDisconnected = () => {
+      collection.clear();
+    };
+
+    const handleConnected = () => {
+      // Reload data when reconnected
+      collection.reload();
+    };
+
+    rs.on('disconnected', handleDisconnected);
+    rs.on('connected', handleConnected);
+
+    onCleanup(() => {
+      (rs as any).removeEventListener('disconnected', handleDisconnected);
+      (rs as any).removeEventListener('connected', handleConnected);
+    });
+  });
+
+  return collection;
 }
 
 export default useCollection;
