@@ -23,6 +23,7 @@
     "remotestorage-widget": "^1.8.0",
     "remotestoragejs": "^2.0.0-beta.8",
     "solid-js": "^1.9.5",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "workbox-window": "^7.4.0"
   }
 }

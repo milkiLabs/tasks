@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="24" fill="#3B82F6"/>
+  <g fill="white">
+    <!-- Checkbox icon -->
+    <rect x="40" y="50" width="32" height="32" rx="6" fill="none" stroke="white" stroke-width="4"/>
+    <polyline points="48,66 56,74 72,58" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Lines representing list items -->
+    <rect x="84" y="58" width="68" height="8" rx="4"/>
+    <rect x="84" y="74" width="48" height="6" rx="3" opacity="0.7"/>
+    
+    <!-- Second row -->
+    <rect x="40" y="100" width="32" height="32" rx="6" fill="none" stroke="white" stroke-width="4"/>
+    <rect x="84" y="108" width="68" height="8" rx="4"/>
+    <rect x="84" y="124" width="56" height="6" rx="3" opacity="0.7"/>
+  </g>
+  <!-- Sync icon in corner -->
+  <circle cx="152" cy="152" r="28" fill="#1D4ED8"/>
+  <path d="M152 136 L152 148 L164 148" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M168 152 A16 16 0 1 1 152 136" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"/>
+</svg>
