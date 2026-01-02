@@ -14,7 +14,6 @@ import {
   type Accessor
 } from 'solid-js';
 import type RemoteStorage from 'remotestoragejs';
-import Widget from 'remotestorage-widget';
 
 /**
  * Connection status for RemoteStorage
@@ -49,21 +48,6 @@ const RemoteStorageContext = createContext<RemoteStorageContextValue>();
 export interface RemoteStorageProviderProps {
   /** The RemoteStorage instance to provide */
   remoteStorage: RemoteStorage;
-  /** 
-   * ID of the element to attach the widget to.
-   * If not provided, widget won't be automatically attached.
-   */
-  widgetContainerId?: string;
-  /**
-   * Options for the RemoteStorage widget
-   */
-  widgetOptions?: {
-    leaveOpen?: boolean;
-    autoCloseAfter?: number;
-    skipInitial?: boolean;
-    logging?: boolean;
-    modalBackdrop?: boolean;
-  };
 }
 
 /**
@@ -111,12 +95,6 @@ export const RemoteStorageProvider: ParentComponent<RemoteStorageProviderProps> 
   };
 
   onMount(() => {
-    // Initialize widget if container ID provided
-    if (props.widgetContainerId) {
-      const widget = new Widget(rs, props.widgetOptions);
-      widget.attach(props.widgetContainerId);
-    }
-
     // Event handlers
     const handleConnected = () => {
       setStatus('connected');
