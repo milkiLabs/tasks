@@ -9,7 +9,7 @@ export default defineConfig({
     solidPlugin(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.svg'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
         name: 'RemoteStorage Todo',
         short_name: 'RS Todo',
@@ -20,20 +20,20 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'pwa-192x192.svg',
+            src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/svg+xml',
+            type: 'image/png',
           },
           {
-            src: 'pwa-512x512.svg',
+            src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
+            type: 'image/png',
           },
           {
-            src: 'pwa-512x512.svg',
+            src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any maskable',
+            type: 'image/png',
+            purpose: 'maskable',
           },
         ],
       },
