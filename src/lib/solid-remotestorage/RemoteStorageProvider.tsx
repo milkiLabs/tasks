@@ -148,10 +148,13 @@ export const RemoteStorageProvider: ParentComponent<RemoteStorageProviderProps> 
       setUserAddress(rs.remote.userAddress);
     }
 
-    // Cleanup on unmount
+    // Cleanup on unmount - RemoteStorage does have an off method
     onCleanup(() => {
-      // RemoteStorage doesn't have an off method, but we can leave it
-      // as the instance persists
+      // Use removeEventListener (the type definition doesn't expose it but it exists)
+      (rs as any).removeEventListener('connected', handleConnected);
+      (rs as any).removeEventListener('disconnected', handleDisconnected);
+      (rs as any).removeEventListener('ready', handleReady);
+      (rs as any).removeEventListener('error', handleError);
     });
   });
 

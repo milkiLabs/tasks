@@ -5,6 +5,7 @@
  * with the RemoteStorage context.
  */
 
+import type RemoteStorage from 'remotestoragejs';
 import { createCollection, type CollectionAPI, type CollectionOptions } from './createCollection';
 import { useRemoteStorage } from './RemoteStorageProvider';
 import type { BaseItem } from './types';
@@ -18,13 +19,19 @@ export interface UseCollectionOptions<T extends BaseItem> {
    * Function to get the module from the RemoteStorage instance
    * @example (rs) => rs.todos
    */
-  getModule: (rs: any) => ModuleExports<T>;
+  getModule: (rs: RemoteStorage) => ModuleExports<T>;
   
   /** Sort function for ordering items */
   sortFn?: (a: T, b: T) => number;
   
   /** Filter function for filtering items */
   filterFn?: (item: T) => boolean;
+  
+  /** 
+   * Whether to load data immediately 
+   * @default true
+   */
+  autoLoad?: boolean;
 }
 
 /**
@@ -75,7 +82,8 @@ export function useCollection<T extends BaseItem>(
   return createCollection({
     module,
     sortFn: options.sortFn,
-    filterFn: options.filterFn
+    filterFn: options.filterFn,
+    autoLoad: options.autoLoad
   });
 }
 

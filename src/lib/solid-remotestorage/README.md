@@ -7,9 +7,10 @@ A reusable library for integrating [RemoteStorage](https://remotestorage.io/) wi
 - 🔄 **Reactive State** - SolidJS stores with fine-grained reactivity
 - 📴 **Offline-First** - Works without internet, syncs when connected
 - 🔐 **User-Owned Data** - Data stored in user's own storage
-- ⚡ **Optimistic Updates** - Instant UI feedback
+- ⚡ **Optimistic Updates** - Instant UI feedback with automatic rollback on error
 - 📦 **Modular** - Clean separation of data modules
-- 🎯 **Type-Safe** - Full TypeScript support
+- 🎯 **Type-Safe** - Full TypeScript support with proper BaseClient types
+- 🔗 **Shared State** - Optional singleton collections for cross-component state
 
 ## Quick Start
 
@@ -233,10 +234,11 @@ Create a reactive collection from a module.
 
 ```typescript
 interface CollectionOptions<T extends BaseItem> {
-  module: ModuleExports<T>;           // For createCollection
+  module: ModuleExports<T>;            // For createCollection
   getModule: (rs) => ModuleExports<T>; // For useCollection
   sortFn?: (a: T, b: T) => number;
   filterFn?: (item: T) => boolean;
+  autoLoad?: boolean;                  // Load data immediately (default: true)
 }
 
 // Returns:
@@ -244,13 +246,64 @@ interface CollectionAPI<T> {
   items: T[];                    // Reactive array
   isLoading: () => boolean;
   error: () => Error | null;
-  add: (data) => Promise<T>;     // Optimistic
-  update: (id, updates) => Promise<void>;  // Optimistic
-  remove: (id) => Promise<void>; // Optimistic
+  add: (data) => Promise<T>;     // Optimistic with rollback on error
+  update: (id, updates) => Promise<void>;  // Optimistic with rollback
+  remove: (id) => Promise<void>; // Optimistic with rollback
   find: (id) => T | undefined;
   reload: () => Promise<void>;
 }
 ```
+
+### `createSharedCollection<T>(options)`
+
+Create a **singleton** reactive collection that is shared across all components.
+Use this when multiple components need to access the same data without prop drilling.
+
+```typescript
+// stores/todos.ts - Create the shared store
+import { createSharedCollection } from '../lib/solid-remotestorage';
+import { remoteStorage } from '../remoteStorageInstance';
+
+export const todosStore = createSharedCollection({
+  module: remoteStorage.todos,
+  sortFn: (a, b) => b.createdAt - a.createdAt
+});
+
+// App.tsx - Initialize once at app startup
+import { onMount } from 'solid-js';
+import { todosStore } from './stores/todos';
+
+function App() {
+  onMount(() => {
+    todosStore.init();  // Start loading data and listening for changes
+  });
+  // ...
+}
+
+// Any component - Use directly without context
+import { todosStore } from '../stores/todos';
+
+function TodoList() {
+  return (
+    <Show when={todosStore.isInitialized()}>
+      <For each={todosStore.items}>
+        {(todo) => <TodoItem todo={todo} />}
+      </For>
+    </Show>
+  );
+}
+
+function AddTodoButton() {
+  // Same store, same data - no prop drilling!
+  const handleAdd = () => todosStore.add({ title: 'New', completed: false });
+  return <button onClick={handleAdd}>Add</button>;
+}
+```
+
+**SharedCollectionAPI** includes everything from `CollectionAPI` plus:
+- `isInitialized: () => boolean` - Whether initial load completed
+- `init: () => void` - Start the collection (call once in app root)
+- `dispose: () => void` - Cleanup (for SSR or testing)
 
 ### Types
 
@@ -277,8 +330,8 @@ interface ChangeEvent<T> {
 ```typescript
 import { generateId, debounce } from './lib/solid-remotestorage';
 
-// Generate unique ID
-const id = generateId(); // "1704067200000-abc123xyz"
+// Generate unique ID (uses crypto.randomUUID when available)
+const id = generateId(); // "f47ac10b-58cc-4372-a567-0e02b2c3d479"
 
 // Debounce a function
 const debouncedSave = debounce(save, 300);
@@ -384,10 +437,12 @@ function SyncButton() {
 ## Best Practices
 
 1. **Always extend `BaseItem`** for your data types
-2. **Use optimistic updates** via collection methods
-3. **Handle loading states** in UI
+2. **Use optimistic updates** via collection methods (they auto-rollback on error)
+3. **Handle loading and error states** in UI
 4. **Keep modules small** - one entity per module
 5. **Use TypeScript** for type safety with module augmentation
+6. **Use `createSharedCollection`** when multiple components need the same data
+7. **Use `useCollection`** for component-scoped data that doesn't need sharing
 
 ## Troubleshooting
 
@@ -404,3 +459,32 @@ function SyncButton() {
 ### TypeScript errors with rs.moduleName
 - Add module augmentation to extend RemoteStorage interface
 - See example in "Define Your Data Module" section
+
+### Optimistic update shows then disappears
+- The operation failed and was rolled back
+- Check `error()` accessor for the error details
+- Errors are also thrown, so wrap in try/catch if needed
+
+## Exports
+
+```typescript
+// Core
+export { createRemoteStorage } from './createRemoteStorage';
+export { RemoteStorageProvider, useRemoteStorage } from './RemoteStorageProvider';
+export { createModule } from './createModule';
+export { createCollection } from './createCollection';
+export { createSharedCollection } from './createSharedCollection';
+export { useCollection } from './useCollection';
+
+// Utilities
+export { generateId, debounce } from './utils';
+
+// Types
+export type { 
+  BaseItem, 
+  ChangeEvent, 
+  SyncStatus,
+  RemoteStorage,
+  BaseClient 
+} from './types';
+```

@@ -21,10 +21,11 @@ export { createRemoteStorage, type RemoteStorageConfig } from './createRemoteSto
 export { RemoteStorageProvider, useRemoteStorage, type ConnectionStatus } from './RemoteStorageProvider';
 export { createModule, type ModuleDefinition, type ModuleExports } from './createModule';
 export { createCollection, type CollectionOptions, type CollectionAPI } from './createCollection';
+export { createSharedCollection, type SharedCollectionOptions, type SharedCollectionAPI } from './createSharedCollection';
 export { useCollection } from './useCollection';
 
 // Utility exports
 export { generateId, debounce } from './utils';
 
 // Type exports
-export type { BaseItem, ChangeEvent, SyncStatus } from './types';
+export type { BaseItem, ChangeEvent, SyncStatus, RemoteStorage, BaseClient } from './types';

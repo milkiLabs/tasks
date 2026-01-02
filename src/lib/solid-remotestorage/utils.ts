@@ -4,14 +4,20 @@
 
 /**
  * Generate a unique ID for new items.
- * Combines timestamp with random string for uniqueness.
+ * Uses crypto.randomUUID when available (modern browsers, Node 19+),
+ * falls back to timestamp + random string.
  * 
  * @example
  * ```ts
- * const id = generateId(); // "1704067200000-x7k2m9p3q"
+ * const id = generateId(); // "f47ac10b-58cc-4372-a567-0e02b2c3d479"
  * ```
  */
 export function generateId(): string {
+  // Use crypto.randomUUID if available (modern browsers, Node 19+)
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback for older environments
   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 

@@ -4,6 +4,7 @@
  * Provides a type-safe way to define data modules with CRUD operations.
  */
 
+import type BaseClient from 'remotestoragejs/release/types/baseclient';
 import type { BaseItem, JSONSchema } from './types';
 import { generateId } from './utils';
 
@@ -27,7 +28,7 @@ export interface ModuleDefinition<T extends BaseItem> {
    * Custom exports to add to the module
    * Receives the privateClient and publicClient
    */
-  customExports?: (privateClient: any, publicClient: any) => Record<string, any>;
+  customExports?: (privateClient: BaseClient, publicClient: BaseClient) => Record<string, unknown>;
 }
 
 /**
@@ -82,12 +83,12 @@ export interface ModuleExports<T extends BaseItem> {
  */
 export function createModule<T extends BaseItem>(
   definition: ModuleDefinition<T>
-): { name: string; builder: (privateClient: any, publicClient: any) => { exports: ModuleExports<T> & Record<string, any> } } {
+): { name: string; builder: (privateClient: BaseClient, publicClient: BaseClient) => { exports: ModuleExports<T> & Record<string, unknown> } } {
   const { name, schema, customExports } = definition;
   
   return {
     name,
-    builder: (privateClient: any, publicClient: any) => {
+    builder: (privateClient: BaseClient, publicClient: BaseClient) => {
       // Declare the type if schema is provided
       if (schema) {
         privateClient.declareType(name, schema);
@@ -116,11 +117,11 @@ export function createModule<T extends BaseItem>(
         },
 
         async get(id: string): Promise<T | undefined> {
-          return privateClient.getObject(id);
+          return privateClient.getObject(id) as Promise<T | undefined>;
         },
 
         async store(item: T): Promise<void> {
-          return privateClient.storeObject(name, item.id, item);
+          await privateClient.storeObject(name, item.id, item);
         },
 
         async create(data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T> {
@@ -149,7 +150,7 @@ export function createModule<T extends BaseItem>(
         },
 
         async remove(id: string): Promise<void> {
-          return privateClient.remove(id);
+          await privateClient.remove(id);
         },
 
         onChange(callback: (event: any) => void): void {

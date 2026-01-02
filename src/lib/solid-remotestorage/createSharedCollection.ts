@@ -1,19 +1,23 @@
 /**
- * Collection factory for creating reactive data collections
+ * Shared Collection factory for creating singleton reactive data collections
  * 
- * Creates a SolidJS store-backed collection with automatic sync
- * to RemoteStorage.
+ * Unlike createCollection which creates a new store per component,
+ * createSharedCollection creates a singleton store that is shared across
+ * all components that use it.
+ * 
+ * Use this when you need the same data to be synchronized across multiple
+ * components without prop drilling or context.
  */
 
 import { createStore, produce, reconcile, type SetStoreFunction } from 'solid-js/store';
-import { createSignal, onMount, onCleanup, type Accessor } from 'solid-js';
+import { createSignal, createRoot, type Accessor } from 'solid-js';
 import type { BaseItem, ChangeEvent } from './types';
 import type { ModuleExports } from './createModule';
 
 /**
- * Options for creating a collection
+ * Options for creating a shared collection
  */
-export interface CollectionOptions<T extends BaseItem> {
+export interface SharedCollectionOptions<T extends BaseItem> {
   /** The module exports object from RemoteStorage */
   module: ModuleExports<T>;
   
@@ -28,18 +32,12 @@ export interface CollectionOptions<T extends BaseItem> {
    * @default No filtering
    */
   filterFn?: (item: T) => boolean;
-  
-  /**
-   * Whether to load data immediately on creation
-   * @default true
-   */
-  autoLoad?: boolean;
 }
 
 /**
- * API returned by createCollection
+ * API returned by createSharedCollection
  */
-export interface CollectionAPI<T extends BaseItem> {
+export interface SharedCollectionAPI<T extends BaseItem> {
   /** Reactive array of items */
   items: T[];
   /** Set function for direct store manipulation (advanced) */
@@ -48,6 +46,8 @@ export interface CollectionAPI<T extends BaseItem> {
   isLoading: Accessor<boolean>;
   /** Error state */
   error: Accessor<Error | null>;
+  /** Whether initial load has completed */
+  isInitialized: Accessor<boolean>;
   
   // CRUD operations with optimistic updates
   /** Add a new item */
@@ -61,56 +61,90 @@ export interface CollectionAPI<T extends BaseItem> {
   
   /** Reload all items from storage */
   reload: () => Promise<void>;
+  
+  /** Initialize the collection (call once in your app root) */
+  init: () => void;
+  
+  /** Dispose of the collection (cleanup) */
+  dispose: () => void;
 }
 
 /**
- * Create a reactive collection backed by RemoteStorage.
+ * Create a shared/singleton reactive collection backed by RemoteStorage.
  * 
- * This is the primary way to work with data in your components.
- * It provides a reactive store that automatically syncs with RemoteStorage.
+ * This creates a collection that lives outside of any component lifecycle,
+ * making it perfect for global app state.
  * 
- * Features:
- * - Optimistic updates for instant UI feedback
- * - Automatic reload on remote changes
- * - Loading and error states
- * - Sorting and filtering
+ * IMPORTANT: You must call `init()` once in your app (e.g., in App.tsx onMount)
+ * to start loading data and listening for changes.
  * 
  * @example
- * ```tsx
- * // In your component
- * function TodoList() {
- *   const { rs } = useRemoteStorage();
- *   const collection = createCollection({
- *     module: rs.todos,
- *     sortFn: (a, b) => b.createdAt - a.createdAt
- *   });
+ * ```ts
+ * // stores/todos.ts
+ * import { createSharedCollection } from '../lib/solid-remotestorage';
+ * import { remoteStorage } from '../remoteStorageInstance';
  * 
+ * export const todosStore = createSharedCollection({
+ *   module: remoteStorage.todos,
+ *   sortFn: (a, b) => b.createdAt - a.createdAt
+ * });
+ * 
+ * // App.tsx
+ * onMount(() => {
+ *   todosStore.init();
+ * });
+ * 
+ * // Any component
+ * function TodoList() {
  *   return (
- *     <For each={collection.items}>
+ *     <For each={todosStore.items}>
  *       {(todo) => <TodoItem todo={todo} />}
  *     </For>
  *   );
  * }
  * ```
  */
-export function createCollection<T extends BaseItem>(
-  options: CollectionOptions<T>
-): CollectionAPI<T> {
+export function createSharedCollection<T extends BaseItem>(
+  options: SharedCollectionOptions<T>
+): SharedCollectionAPI<T> {
   const { 
     module, 
     sortFn = (a, b) => b.createdAt - a.createdAt,
-    filterFn,
-    autoLoad = true
+    filterFn 
   } = options;
 
-  const [items, setItems] = createStore<T[]>([]);
-  const [isLoading, setIsLoading] = createSignal(true);
-  const [error, setError] = createSignal<Error | null>(null);
+  // Create a root that won't be disposed when components unmount
+  let dispose: (() => void) | null = null;
+  let items: T[] = [];
+  let setItems!: SetStoreFunction<T[]>;
+  let isLoading!: Accessor<boolean>;
+  let setIsLoading!: (v: boolean) => void;
+  let error!: Accessor<Error | null>;
+  let setError!: (v: Error | null) => void;
+  let isInitialized!: Accessor<boolean>;
+  let setIsInitialized!: (v: boolean) => void;
+  
+  // Track if already initialized
+  let hasInit = false;
 
-  // Track if initial load is complete
-  let initialLoadComplete = false;
-  // Track change handler for cleanup
-  let changeHandler: ((event: ChangeEvent<T>) => void) | null = null;
+  // Create reactive primitives in a persistent root
+  dispose = createRoot((disposeFn) => {
+    const [itemsStore, setItemsStore] = createStore<T[]>([]);
+    const [loading, setLoading] = createSignal(true);
+    const [err, setErr] = createSignal<Error | null>(null);
+    const [initialized, setInitializedSignal] = createSignal(false);
+    
+    items = itemsStore;
+    setItems = setItemsStore;
+    isLoading = loading;
+    setIsLoading = setLoading;
+    error = err;
+    setError = setErr;
+    isInitialized = initialized;
+    setIsInitialized = setInitializedSignal;
+    
+    return disposeFn;
+  });
 
   /**
    * Load all items from storage
@@ -126,22 +160,20 @@ export function createCollection<T extends BaseItem>(
       }
       
       processed = processed.sort(sortFn);
-      // Use reconcile for efficient diffing instead of replacing entire array
       setItems(reconcile(processed));
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)));
-      console.error('Error loading collection:', err);
+      console.error('Error loading shared collection:', err);
     } finally {
       setIsLoading(false);
-      initialLoadComplete = true;
+      setIsInitialized(true);
     }
   };
 
   /**
-   * Add a new item with optimistic update and rollback on error
+   * Add a new item with optimistic update
    */
   const add = async (data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T> => {
-    // Create item first to get the ID
     let item: T;
     try {
       item = await module.create(data);
@@ -150,7 +182,6 @@ export function createCollection<T extends BaseItem>(
       throw err;
     }
     
-    // Optimistic update - add to store
     setItems(produce((items) => {
       items.unshift(item);
       items.sort(sortFn);
@@ -163,11 +194,9 @@ export function createCollection<T extends BaseItem>(
    * Update an item with optimistic update and rollback on error
    */
   const update = async (id: string, updates: Partial<Omit<T, 'id' | 'createdAt'>>) => {
-    // Store original for rollback
     const originalIndex = items.findIndex(item => item.id === id);
     const original = originalIndex !== -1 ? { ...items[originalIndex] } : null;
     
-    // Optimistic update
     setItems(produce((items) => {
       const index = items.findIndex(item => item.id === id);
       if (index !== -1) {
@@ -175,11 +204,9 @@ export function createCollection<T extends BaseItem>(
       }
     }));
     
-    // Persist to storage
     try {
       await module.update(id, updates);
     } catch (err) {
-      // Rollback on error
       if (original) {
         setItems(produce((items) => {
           const index = items.findIndex(item => item.id === id);
@@ -197,11 +224,9 @@ export function createCollection<T extends BaseItem>(
    * Remove an item with optimistic update and rollback on error
    */
   const remove = async (id: string) => {
-    // Store original for rollback
     const originalIndex = items.findIndex(item => item.id === id);
     const original = originalIndex !== -1 ? { ...items[originalIndex] } : null;
     
-    // Optimistic update
     setItems(produce((items) => {
       const index = items.findIndex(item => item.id === id);
       if (index !== -1) {
@@ -209,11 +234,9 @@ export function createCollection<T extends BaseItem>(
       }
     }));
     
-    // Persist to storage
     try {
       await module.remove(id);
     } catch (err) {
-      // Rollback on error
       if (original) {
         setItems(produce((items) => {
           items.splice(originalIndex, 0, original as T);
@@ -232,43 +255,52 @@ export function createCollection<T extends BaseItem>(
     return items.find(item => item.id === id);
   };
 
-  // Set up change listener and initial load
-  onMount(() => {
-    // Initial load if autoLoad is enabled
-    if (autoLoad) {
-      reload();
-    } else {
-      setIsLoading(false);
+  /**
+   * Initialize the collection - call once in your app
+   */
+  const init = () => {
+    if (hasInit) {
+      console.warn('Shared collection already initialized');
+      return;
     }
+    hasInit = true;
+    
+    // Load data
+    reload();
     
     // Listen for remote changes
-    changeHandler = (event: ChangeEvent<T>) => {
-      // Only reload for remote or local origin (not window - our own changes)
-      if (initialLoadComplete && (event.origin === 'remote' || event.origin === 'local')) {
+    module.onChange((event: ChangeEvent<T>) => {
+      if (event.origin === 'remote' || event.origin === 'local') {
         reload();
       }
-    };
-    module.onChange(changeHandler);
-  });
+    });
+  };
 
-  // Cleanup change listener on unmount
-  onCleanup(() => {
-    // Note: RemoteStorage's privateClient doesn't expose off() for change events
-    // The changeHandler will be garbage collected with the component
-    changeHandler = null;
-  });
+  /**
+   * Dispose of the collection (cleanup)
+   */
+  const disposeCollection = () => {
+    if (dispose) {
+      dispose();
+      dispose = null;
+    }
+    hasInit = false;
+  };
 
   return {
-    items,
+    get items() { return items; },
     setItems,
     isLoading,
     error,
+    isInitialized,
     add,
     update,
     remove,
     find,
-    reload
+    reload,
+    init,
+    dispose: disposeCollection
   };
 }
 
-export default createCollection;
+export default createSharedCollection;

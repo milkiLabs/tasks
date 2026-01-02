@@ -2,6 +2,12 @@
  * Common types used throughout the solid-remotestorage library
  */
 
+import type RemoteStorage from 'remotestoragejs';
+import type BaseClient from 'remotestoragejs/release/types/baseclient';
+
+// Re-export types from remotestoragejs for convenience
+export type { RemoteStorage, BaseClient };
+
 /**
  * Base interface for all stored items.
  * Your data types should extend this.
