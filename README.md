@@ -1,43 +1,45 @@
-## Usage
+# Milki Tasks
 
-Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
+**Milki Tasks** is a local-first, user-owned task manager.  
+No accounts. No lock-in. No data harvesting.
 
-This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
+Your tasks live with you — not on someone else’s server.
 
-```bash
-$ npm install # or pnpm install or yarn install
-```
+---
 
-## Exploring the template
+## ✨ What is Milki Tasks?
 
-This template's goal is to showcase the routing features of Solid.
-It also showcase how the router and Suspense work together to parallelize data fetching tied to a route via the `.data.ts` pattern.
+Milki Tasks is a simple task management app built around a clear principle:
 
-You can learn more about it on the [`@solidjs/router` repository](https://github.com/solidjs/solid-router)
+> **Productivity tools should belong to their users.**
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+It uses **remoteStorage** to sync your data across devices _without_ central servers, giving you full ownership and control.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## 🧭 Core Principles
 
-### `npm run dev` or `npm start`
+- **Local-first**  
+  The app works fully offline. Network is optional.
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- **User-owned data**  
+  Your tasks are stored in _your_ remoteStorage provider.
 
-The page will reload if you make edits.<br>
+- **Cross-device sync (without a backend)**  
+  Your tasks sync across devices using _your own_ remoteStorage provider.
 
-### `npm run build`
+- **Installable PWA**  
+  Install it on desktop or mobile — no app store required.
 
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
+- **No accounts, no tracking**  
+  No emails, no analytics, no dark patterns.
 
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
+- **Free & open-source**  
+  Transparent by design. Forkable by default.
 
-## Deployment
+---
 
-You can deploy the `dist` folder to any static host provider (netlify, surge, now, etc.)
+## 🧰 Tech Stack
 
-## This project was created with the [Solid CLI](https://github.com/solidjs-community/solid-cli)
+- **UI:** [SolidJS](https://www.solidjs.com/) — fast, reactive, minimal
+- **Sync & storage:** [remoteStorage](https://remotestorage.io/)
