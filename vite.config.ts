@@ -12,7 +12,7 @@ export default defineConfig({
       registerType: "prompt",
       includeAssets: ["favicon.svg", "apple-touch-icon-180x180.png"],
       manifest: {
-        name: "RemoteStorage Todo",
+        name: "Milki Tasks",
         short_name: "RS Todo",
         description: "A todo app with RemoteStorage sync and offline support",
         theme_color: "#3B82F6",
