@@ -58,16 +58,10 @@ const APP_NAMESPACE = 'tasks';
 const STORAGE_PREFIX = `${APP_NAMESPACE}:`;
 
 /**
- * The key prefix that remoteStorage.js uses for all its storage
- */
-const RS_KEY_PREFIX = 'remotestorage:';
-const RS_KEY_REGEX = /^remotestorage:/;
-
-/**
  * Check if a key is a remoteStorage key that needs namespacing
  */
 function isRemoteStorageKey(key: string): boolean {
-  return RS_KEY_REGEX.test(key);
+  return typeof key === 'string' && key.startsWith('remotestorage:');
 }
 
 /**
@@ -77,78 +71,67 @@ function addNamespace(key: string): string {
   return STORAGE_PREFIX + key;
 }
 
-/**
- * Remove namespace prefix from a key (for iteration)
- */
-function removeNamespace(key: string): string {
-  if (key.startsWith(STORAGE_PREFIX + RS_KEY_PREFIX)) {
-    return key.slice(STORAGE_PREFIX.length);
-  }
-  return key;
-}
-
 // ============================================================================
 // PATCH localStorage
 // ============================================================================
 
-const originalLocalStorage = {
-  getItem: localStorage.getItem.bind(localStorage),
-  setItem: localStorage.setItem.bind(localStorage),
-  removeItem: localStorage.removeItem.bind(localStorage),
-  key: localStorage.key.bind(localStorage),
-};
+const _lsGetItem = localStorage.getItem.bind(localStorage);
+const _lsSetItem = localStorage.setItem.bind(localStorage);
+const _lsRemoveItem = localStorage.removeItem.bind(localStorage);
 
 localStorage.getItem = function(key: string): string | null {
   if (isRemoteStorageKey(key)) {
-    return originalLocalStorage.getItem(addNamespace(key));
+    return _lsGetItem(addNamespace(key));
   }
-  return originalLocalStorage.getItem(key);
+  return _lsGetItem(key);
 };
 
 localStorage.setItem = function(key: string, value: string): void {
   if (isRemoteStorageKey(key)) {
-    return originalLocalStorage.setItem(addNamespace(key), value);
+    return _lsSetItem(addNamespace(key), value);
   }
-  return originalLocalStorage.setItem(key, value);
+  return _lsSetItem(key, value);
 };
 
 localStorage.removeItem = function(key: string): void {
   if (isRemoteStorageKey(key)) {
-    return originalLocalStorage.removeItem(addNamespace(key));
+    return _lsRemoveItem(addNamespace(key));
   }
-  return originalLocalStorage.removeItem(key);
+  return _lsRemoveItem(key);
 };
 
-// Also handle delete localStorage[key] syntax used by remoteStorage
-const localStorageProxy = new Proxy(localStorage, {
-  deleteProperty(_target, prop: string) {
-    if (isRemoteStorageKey(prop)) {
-      originalLocalStorage.removeItem(addNamespace(prop));
-    } else {
-      originalLocalStorage.removeItem(prop);
+// Handle `delete localStorage[key]` syntax used by remoteStorage's wireclient
+const _origLocalStorage = window.localStorage;
+const localStorageProxy = new Proxy(_origLocalStorage, {
+  deleteProperty(_target, prop) {
+    if (typeof prop === 'string') {
+      if (isRemoteStorageKey(prop)) {
+        _lsRemoveItem(addNamespace(prop));
+      } else {
+        _lsRemoveItem(prop);
+      }
     }
     return true;
   },
-  get(target, prop: string) {
-    if (prop === 'getItem' || prop === 'setItem' || prop === 'removeItem' || prop === 'key') {
-      return target[prop];
+  get(target, prop) {
+    const value = Reflect.get(target, prop);
+    if (typeof value === 'function') {
+      return value.bind(target);
     }
-    if (typeof prop === 'string' && isRemoteStorageKey(prop)) {
-      return originalLocalStorage.getItem(addNamespace(prop));
-    }
-    return target[prop];
+    return value;
   },
-  set(target, prop: string, value) {
-    if (typeof prop === 'string' && isRemoteStorageKey(prop)) {
-      originalLocalStorage.setItem(addNamespace(prop), value);
-    } else {
-      target[prop] = value;
+  set(_target, prop, value) {
+    if (typeof prop === 'string') {
+      if (isRemoteStorageKey(prop)) {
+        _lsSetItem(addNamespace(prop), value);
+      } else {
+        _lsSetItem(prop, value);
+      }
     }
     return true;
   }
 });
 
-// Replace global localStorage with proxy
 Object.defineProperty(window, 'localStorage', {
   value: localStorageProxy,
   writable: false,
@@ -159,31 +142,29 @@ Object.defineProperty(window, 'localStorage', {
 // PATCH sessionStorage
 // ============================================================================
 
-const originalSessionStorage = {
-  getItem: sessionStorage.getItem.bind(sessionStorage),
-  setItem: sessionStorage.setItem.bind(sessionStorage),
-  removeItem: sessionStorage.removeItem.bind(sessionStorage),
-};
+const _ssGetItem = sessionStorage.getItem.bind(sessionStorage);
+const _ssSetItem = sessionStorage.setItem.bind(sessionStorage);
+const _ssRemoveItem = sessionStorage.removeItem.bind(sessionStorage);
 
 sessionStorage.getItem = function(key: string): string | null {
   if (isRemoteStorageKey(key)) {
-    return originalSessionStorage.getItem(addNamespace(key));
+    return _ssGetItem(addNamespace(key));
   }
-  return originalSessionStorage.getItem(key);
+  return _ssGetItem(key);
 };
 
 sessionStorage.setItem = function(key: string, value: string): void {
   if (isRemoteStorageKey(key)) {
-    return originalSessionStorage.setItem(addNamespace(key), value);
+    return _ssSetItem(addNamespace(key), value);
   }
-  return originalSessionStorage.setItem(key, value);
+  return _ssSetItem(key, value);
 };
 
 sessionStorage.removeItem = function(key: string): void {
   if (isRemoteStorageKey(key)) {
-    return originalSessionStorage.removeItem(addNamespace(key));
+    return _ssRemoveItem(addNamespace(key));
   }
-  return originalSessionStorage.removeItem(key);
+  return _ssRemoveItem(key);
 };
 
 // ============================================================================
@@ -193,23 +174,20 @@ sessionStorage.removeItem = function(key: string): void {
 const RS_DB_NAME = 'remotestorage';
 const NAMESPACED_DB_NAME = `${APP_NAMESPACE}-remotestorage`;
 
-const originalIndexedDBOpen = indexedDB.open.bind(indexedDB);
-const originalIndexedDBDeleteDatabase = indexedDB.deleteDatabase.bind(indexedDB);
+const _idbOpen = indexedDB.open.bind(indexedDB);
+const _idbDeleteDatabase = indexedDB.deleteDatabase.bind(indexedDB);
 
 indexedDB.open = function(name: string, version?: number): IDBOpenDBRequest {
-  if (name === RS_DB_NAME) {
-    name = NAMESPACED_DB_NAME;
+  const dbName = name === RS_DB_NAME ? NAMESPACED_DB_NAME : name;
+  if (version !== undefined) {
+    return _idbOpen(dbName, version);
   }
-  return version !== undefined 
-    ? originalIndexedDBOpen(name, version) 
-    : originalIndexedDBOpen(name);
+  return _idbOpen(dbName);
 };
 
 indexedDB.deleteDatabase = function(name: string): IDBOpenDBRequest {
-  if (name === RS_DB_NAME) {
-    name = NAMESPACED_DB_NAME;
-  }
-  return originalIndexedDBDeleteDatabase(name);
+  const dbName = name === RS_DB_NAME ? NAMESPACED_DB_NAME : name;
+  return _idbDeleteDatabase(dbName);
 };
 
 // ============================================================================
@@ -221,30 +199,25 @@ const NAMESPACED_CHANNEL_NAME = `${APP_NAMESPACE}:remotestorage:changes`;
 
 const OriginalBroadcastChannel = window.BroadcastChannel;
 
-window.BroadcastChannel = class NamespacedBroadcastChannel extends OriginalBroadcastChannel {
+class NamespacedBroadcastChannel extends OriginalBroadcastChannel {
   constructor(name: string) {
-    if (name === RS_CHANNEL_NAME) {
-      name = NAMESPACED_CHANNEL_NAME;
-    }
-    super(name);
+    const channelName = name === RS_CHANNEL_NAME ? NAMESPACED_CHANNEL_NAME : name;
+    super(channelName);
   }
-} as typeof BroadcastChannel;
+}
+
+Object.defineProperty(window, 'BroadcastChannel', {
+  value: NamespacedBroadcastChannel,
+  writable: true,
+  configurable: true
+});
 
 // ============================================================================
-// EXPORT FOR DEBUGGING
+// EXPORT
 // ============================================================================
 
-/**
- * Exported for debugging purposes. You can check the namespace in the console:
- * 
- * ```js
- * import { STORAGE_NAMESPACE } from './lib/storageNamespace';
- * console.log('App namespace:', STORAGE_NAMESPACE);
- * ```
- */
 export const STORAGE_NAMESPACE = APP_NAMESPACE;
 
-// Log that namespacing is active (helpful for debugging)
 if (import.meta.env.DEV) {
   console.log(`[storageNamespace] Active with namespace: "${APP_NAMESPACE}"`);
 }

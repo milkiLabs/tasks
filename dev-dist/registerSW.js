@@ -1,6 +1,1 @@
-if ("serviceWorker" in navigator)
-  navigator.serviceWorker.register("/dev-sw.js?dev-sw", {
-    scope: "/tasks/",
-    type: "classic",
-  });
-
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/tasks/dev-sw.js?dev-sw', { scope: '/tasks/', type: 'classic' })

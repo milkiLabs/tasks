@@ -3,6 +3,11 @@
  * 
  * Creates a SolidJS store-backed collection with automatic sync
  * to RemoteStorage.
+ * 
+ * OFFLINE-FIRST DESIGN:
+ * - Data is loaded immediately from local cache (no network wait)
+ * - Uses maxAge=false to always read from cache first
+ * - Remote changes are synced in the background
  */
 
 import { createStore, produce, reconcile, type SetStoreFunction } from 'solid-js/store';
@@ -115,11 +120,13 @@ export function createCollection<T extends BaseItem>(
   let changeHandler: ((event: ChangeEvent<T>) => void) | null = null;
 
   /**
-   * Load all items from storage
+   * Load all items from storage.
+   * Uses maxAge=false to always read from local cache first (offline-first).
    */
   const reload = async () => {
     try {
       setError(null);
+      // getAll with maxAge=false returns cached data immediately
       const allItems = await module.getAllAsArray();
       let processed = allItems;
       
@@ -138,6 +145,14 @@ export function createCollection<T extends BaseItem>(
       initialLoadComplete = true;
     }
   };
+
+  // Start loading immediately if autoLoad is enabled (don't wait for onMount)
+  // This makes the initial render faster since data loading starts right away
+  if (autoLoad) {
+    reload();
+  } else {
+    setIsLoading(false);
+  }
 
   /**
    * Add a new item with optimistic update and rollback on error
@@ -244,15 +259,8 @@ export function createCollection<T extends BaseItem>(
     initialLoadComplete = false;
   };
 
-  // Set up change listener and initial load
+  // Set up change listener for remote updates
   onMount(() => {
-    // Initial load if autoLoad is enabled
-    if (autoLoad) {
-      reload();
-    } else {
-      setIsLoading(false);
-    }
-    
     // Listen for remote changes
     changeHandler = (event: ChangeEvent<T>) => {
       // Only reload for remote or local origin (not window - our own changes)
