@@ -1,4 +1,9 @@
 /* @refresh reload */
+
+// IMPORTANT: This must be the first import to patch storage APIs before
+// remoteStorage.js initializes. See the file for details on why this exists.
+import "./lib/storageNamespace";
+
 import "solid-devtools";
 import "./index.css";
 

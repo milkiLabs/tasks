@@ -7,7 +7,6 @@ A reusable library for integrating [RemoteStorage](https://remotestorage.io/) wi
 - 🔄 **Reactive State** - SolidJS stores with fine-grained reactivity
 - 📴 **Offline-First** - Works without internet, syncs when connected
 - 🔐 **User-Owned Data** - Data stored in user's own storage
-- ⚡ **Optimistic Updates** - Instant UI feedback with automatic rollback on error
 - 📦 **Modular** - Clean separation of data modules
 - 🎯 **Type-Safe** - Full TypeScript support with proper BaseClient types
 - 🔗 **Shared State** - Optional singleton collections for cross-component state
@@ -17,16 +16,16 @@ A reusable library for integrating [RemoteStorage](https://remotestorage.io/) wi
 ### 1. Install Dependencies
 
 ```bash
-npm install remotestoragejs remotestorage-widget solid-js
+npm install remotestoragejs solid-js
 # or
-pnpm add remotestoragejs remotestorage-widget solid-js
+pnpm add remotestoragejs solid-js
 ```
 
 ### 2. Define Your Data Module
 
 ```typescript
 // src/modules/todos.ts
-import { createModule, type BaseItem } from '../lib/solid-remotestorage';
+import { createModule, type BaseItem } from "../lib/solid-remotestorage";
 
 // Define your data type (must extend BaseItem)
 export interface Todo extends BaseItem {
@@ -36,24 +35,24 @@ export interface Todo extends BaseItem {
 
 // Create the module
 export const TodosModule = createModule<Todo>({
-  name: 'todos',
+  name: "todos",
   schema: {
-    type: 'object',
+    type: "object",
     properties: {
-      id: { type: 'string' },
-      title: { type: 'string' },
-      completed: { type: 'boolean' },
-      createdAt: { type: 'number' },
-      updatedAt: { type: 'number' }
+      id: { type: "string" },
+      title: { type: "string" },
+      completed: { type: "boolean" },
+      createdAt: { type: "number" },
+      updatedAt: { type: "number" },
     },
-    required: ['id', 'title', 'completed', 'createdAt']
-  }
+    required: ["id", "title", "completed", "createdAt"],
+  },
 });
 
 // Extend RemoteStorage type for TypeScript
-declare module 'remotestoragejs' {
+declare module "remotestoragejs" {
   interface RemoteStorage {
-    todos: ReturnType<typeof TodosModule.builder>['exports'];
+    todos: ReturnType<typeof TodosModule.builder>["exports"];
   }
 }
 ```
@@ -62,12 +61,12 @@ declare module 'remotestoragejs' {
 
 ```typescript
 // src/remoteStorage.ts
-import { createRemoteStorage } from './lib/solid-remotestorage';
-import { TodosModule } from './modules/todos';
+import { createRemoteStorage } from "./lib/solid-remotestorage";
+import { TodosModule } from "./modules/todos";
 
 export const remoteStorage = createRemoteStorage({
   modules: [TodosModule],
-  logging: import.meta.env.DEV  // Enable logging in development
+  logging: import.meta.env.DEV, // Enable logging in development
 });
 ```
 
@@ -75,18 +74,18 @@ export const remoteStorage = createRemoteStorage({
 
 ```tsx
 // src/App.tsx
-import { RemoteStorageProvider } from './lib/solid-remotestorage';
-import { remoteStorage } from './remoteStorage';
+import { RemoteStorageProvider } from "./lib/solid-remotestorage";
+import { remoteStorage } from "./remoteStorage";
 
 function App(props) {
   return (
-    <RemoteStorageProvider 
+    <RemoteStorageProvider
       remoteStorage={remoteStorage}
       widgetContainerId="rs-widget"
     >
       {/* Widget will be attached here */}
       <div id="rs-widget" />
-      
+
       {props.children}
     </RemoteStorageProvider>
   );
@@ -97,34 +96,34 @@ function App(props) {
 
 ```tsx
 // src/components/TodoList.tsx
-import { For, Show, createSignal } from 'solid-js';
-import { useCollection } from '../lib/solid-remotestorage';
-import type { Todo } from '../modules/todos';
+import { For, Show, createSignal } from "solid-js";
+import { useCollection } from "../lib/solid-remotestorage";
+import type { Todo } from "../modules/todos";
 
 export function TodoList() {
-  const [newTitle, setNewTitle] = createSignal('');
-  
+  const [newTitle, setNewTitle] = createSignal("");
+
   // Create a reactive collection
   const todos = useCollection<Todo>({
-    getModule: (rs) => rs.todos
+    getModule: (rs) => rs.todos,
   });
 
   const handleAdd = async (e: Event) => {
     e.preventDefault();
     if (!newTitle().trim()) return;
-    
+
     await todos.add({
       title: newTitle(),
-      completed: false
+      completed: false,
     });
-    setNewTitle('');
+    setNewTitle("");
   };
 
   return (
     <div>
       <form onSubmit={handleAdd}>
-        <input 
-          value={newTitle()} 
+        <input
+          value={newTitle()}
           onInput={(e) => setNewTitle(e.currentTarget.value)}
           placeholder="New todo..."
         />
@@ -139,14 +138,14 @@ export function TodoList() {
                 <input
                   type="checkbox"
                   checked={todo.completed}
-                  onChange={() => todos.update(todo.id, { 
-                    completed: !todo.completed 
-                  })}
+                  onChange={() =>
+                    todos.update(todo.id, {
+                      completed: !todo.completed,
+                    })
+                  }
                 />
                 <span>{todo.title}</span>
-                <button onClick={() => todos.remove(todo.id)}>
-                  Delete
-                </button>
+                <button onClick={() => todos.remove(todo.id)}>Delete</button>
               </li>
             )}
           </For>
@@ -165,11 +164,11 @@ Creates a configured RemoteStorage instance.
 
 ```typescript
 interface RemoteStorageConfig {
-  modules?: RSModule[];      // Data modules to load
-  logging?: boolean;         // Enable console logging (default: false)
-  cache?: boolean;           // Enable local caching (default: true)
+  modules?: RSModule[]; // Data modules to load
+  logging?: boolean; // Enable console logging (default: false)
+  cache?: boolean; // Enable local caching (default: true)
   autoClaimAccess?: boolean; // Auto-claim rw access for modules (default: true)
-  autoCaching?: boolean;     // Auto-enable caching for modules (default: true)
+  autoCaching?: boolean; // Auto-enable caching for modules (default: true)
 }
 ```
 
@@ -179,13 +178,14 @@ Creates a data module with standard CRUD operations.
 
 ```typescript
 interface ModuleDefinition<T extends BaseItem> {
-  name: string;           // Module name (folder in storage)
-  schema?: JSONSchema;    // JSON Schema for validation
+  name: string; // Module name (folder in storage)
+  schema?: JSONSchema; // JSON Schema for validation
   customExports?: (privateClient, publicClient) => Record<string, any>;
 }
 ```
 
 **Standard exports provided:**
+
 - `getAll()` - Get all items as object
 - `getAllAsArray()` - Get all items as sorted array
 - `get(id)` - Get single item
@@ -201,11 +201,12 @@ SolidJS context provider for RemoteStorage.
 
 ```tsx
 <RemoteStorageProvider
-  remoteStorage={rs}           // Required: RemoteStorage instance
-  widgetContainerId="widget"   // Optional: Element ID for widget
-  widgetOptions={{             // Optional: Widget configuration
+  remoteStorage={rs} // Required: RemoteStorage instance
+  widgetContainerId="widget" // Optional: Element ID for widget
+  widgetOptions={{
+    // Optional: Widget configuration
     leaveOpen: false,
-    autoCloseAfter: 1500
+    autoCloseAfter: 1500,
   }}
 >
   {children}
@@ -217,14 +218,14 @@ SolidJS context provider for RemoteStorage.
 Hook to access RemoteStorage context.
 
 ```typescript
-const { 
-  rs,           // RemoteStorage instance
-  status,       // () => 'connected' | 'disconnected' | 'connecting'
-  userAddress,  // () => string | null
-  isReady,      // () => boolean
-  sync,         // () => void
-  connect,      // (address: string) => void
-  disconnect    // () => void
+const {
+  rs, // RemoteStorage instance
+  status, // () => 'connected' | 'disconnected' | 'connecting'
+  userAddress, // () => string | null
+  isReady, // () => boolean
+  sync, // () => void
+  connect, // (address: string) => void
+  disconnect, // () => void
 } = useRemoteStorage();
 ```
 
@@ -234,20 +235,20 @@ Create a reactive collection from a module.
 
 ```typescript
 interface CollectionOptions<T extends BaseItem> {
-  module: ModuleExports<T>;            // For createCollection
+  module: ModuleExports<T>; // For createCollection
   getModule: (rs) => ModuleExports<T>; // For useCollection
   sortFn?: (a: T, b: T) => number;
   filterFn?: (item: T) => boolean;
-  autoLoad?: boolean;                  // Load data immediately (default: true)
+  autoLoad?: boolean; // Load data immediately (default: true)
 }
 
 // Returns:
 interface CollectionAPI<T> {
-  items: T[];                    // Reactive array
+  items: T[]; // Reactive array
   isLoading: () => boolean;
   error: () => Error | null;
-  add: (data) => Promise<T>;     // Optimistic with rollback on error
-  update: (id, updates) => Promise<void>;  // Optimistic with rollback
+  add: (data) => Promise<T>; // Optimistic with rollback on error
+  update: (id, updates) => Promise<void>; // Optimistic with rollback
   remove: (id) => Promise<void>; // Optimistic with rollback
   find: (id) => T | undefined;
   reload: () => Promise<void>;
@@ -301,6 +302,7 @@ function AddTodoButton() {
 ```
 
 **SharedCollectionAPI** includes everything from `CollectionAPI` plus:
+
 - `isInitialized: () => boolean` - Whether initial load completed
 - `init: () => void` - Start the collection (call once in app root)
 - `dispose: () => void` - Cleanup (for SSR or testing)
@@ -319,7 +321,7 @@ interface BaseItem {
 interface ChangeEvent<T> {
   path: string;
   relativePath: string;
-  origin: 'window' | 'local' | 'remote' | 'conflict';
+  origin: "window" | "local" | "remote" | "conflict";
   oldValue?: T;
   newValue?: T;
 }
@@ -328,7 +330,7 @@ interface ChangeEvent<T> {
 ### Utilities
 
 ```typescript
-import { generateId, debounce } from './lib/solid-remotestorage';
+import { generateId, debounce } from "./lib/solid-remotestorage";
 
 // Generate unique ID (uses crypto.randomUUID when available)
 const id = generateId(); // "f47ac10b-58cc-4372-a567-0e02b2c3d479"
@@ -343,15 +345,15 @@ const debouncedSave = debounce(save, 300);
 
 ```typescript
 // src/modules/index.ts
-import { NotesModule } from './notes';
-import { TodosModule } from './todos';
-import { BookmarksModule } from './bookmarks';
+import { NotesModule } from "./notes";
+import { TodosModule } from "./todos";
+import { BookmarksModule } from "./bookmarks";
 
 export const modules = [NotesModule, TodosModule, BookmarksModule];
 
 // src/remoteStorage.ts
-import { createRemoteStorage } from './lib/solid-remotestorage';
-import { modules } from './modules';
+import { createRemoteStorage } from "./lib/solid-remotestorage";
+import { modules } from "./modules";
 
 export const remoteStorage = createRemoteStorage({ modules });
 ```
@@ -360,20 +362,22 @@ export const remoteStorage = createRemoteStorage({ modules });
 
 ```typescript
 const TodosModule = createModule<Todo>({
-  name: 'todos',
-  schema: { /* ... */ },
+  name: "todos",
+  schema: {
+    /* ... */
+  },
   customExports: (privateClient) => ({
     // Add custom methods
     async getCompleted(): Promise<Todo[]> {
       const all = await this.getAllAsArray();
-      return all.filter(t => t.completed);
+      return all.filter((t) => t.completed);
     },
-    
+
     async clearCompleted(): Promise<void> {
       const completed = await this.getCompleted();
-      await Promise.all(completed.map(t => this.remove(t.id)));
-    }
-  })
+      await Promise.all(completed.map((t) => this.remove(t.id)));
+    },
+  }),
 });
 ```
 
@@ -384,7 +388,7 @@ const TodosModule = createModule<Todo>({
 const incompleteTodos = useCollection<Todo>({
   getModule: (rs) => rs.todos,
   filterFn: (todo) => !todo.completed,
-  sortFn: (a, b) => a.createdAt - b.createdAt  // Oldest first
+  sortFn: (a, b) => a.createdAt - b.createdAt, // Oldest first
 });
 ```
 
@@ -393,17 +397,18 @@ const incompleteTodos = useCollection<Todo>({
 ```tsx
 function ConnectionBadge() {
   const { status, userAddress } = useRemoteStorage();
-  
+
   return (
     <div class="flex items-center gap-2">
-      <span class={`w-2 h-2 rounded-full ${
-        status() === 'connected' ? 'bg-green-500' : 'bg-gray-400'
-      }`} />
+      <span
+        class={`w-2 h-2 rounded-full ${
+          status() === "connected" ? "bg-green-500" : "bg-gray-400"
+        }`}
+      />
       <span>
-        {status() === 'connected' 
+        {status() === "connected"
           ? `Connected: ${userAddress()}`
-          : 'Offline (local storage)'
-        }
+          : "Offline (local storage)"}
       </span>
     </div>
   );
@@ -415,12 +420,9 @@ function ConnectionBadge() {
 ```tsx
 function SyncButton() {
   const { sync, status } = useRemoteStorage();
-  
+
   return (
-    <button 
-      onClick={sync}
-      disabled={status() !== 'connected'}
-    >
+    <button onClick={sync} disabled={status() !== "connected"}>
       Sync Now
     </button>
   );
@@ -447,20 +449,24 @@ function SyncButton() {
 ## Troubleshooting
 
 ### "Loading todos..." forever
+
 - Check browser console for errors
 - Verify RemoteStorage is initialized before provider mounts
 - Ensure module name matches in schema declaration
 
 ### Data not syncing
+
 - Check connection status via `useRemoteStorage()`
 - Verify caching is enabled for the module path
 - Check browser's IndexedDB for stored data
 
 ### TypeScript errors with rs.moduleName
+
 - Add module augmentation to extend RemoteStorage interface
 - See example in "Define Your Data Module" section
 
 ### Optimistic update shows then disappears
+
 - The operation failed and was rolled back
 - Check `error()` accessor for the error details
 - Errors are also thrown, so wrap in try/catch if needed
@@ -469,22 +475,25 @@ function SyncButton() {
 
 ```typescript
 // Core
-export { createRemoteStorage } from './createRemoteStorage';
-export { RemoteStorageProvider, useRemoteStorage } from './RemoteStorageProvider';
-export { createModule } from './createModule';
-export { createCollection } from './createCollection';
-export { createSharedCollection } from './createSharedCollection';
-export { useCollection } from './useCollection';
+export { createRemoteStorage } from "./createRemoteStorage";
+export {
+  RemoteStorageProvider,
+  useRemoteStorage,
+} from "./RemoteStorageProvider";
+export { createModule } from "./createModule";
+export { createCollection } from "./createCollection";
+export { createSharedCollection } from "./createSharedCollection";
+export { useCollection } from "./useCollection";
 
 // Utilities
-export { generateId, debounce } from './utils';
+export { generateId, debounce } from "./utils";
 
 // Types
-export type { 
-  BaseItem, 
-  ChangeEvent, 
+export type {
+  BaseItem,
+  ChangeEvent,
   SyncStatus,
   RemoteStorage,
-  BaseClient 
-} from './types';
+  BaseClient,
+} from "./types";
 ```
